@@ -1,0 +1,68 @@
+services:
+
+  api:
+    build:
+      context: ..
+      dockerfile: deployments/api.Dockerfile
+    container_name: scraper-api
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_ADDR: redis:6379
+      MONGO_URI: mongodb://mongo:27017
+    depends_on:
+      - redis
+      - mongo
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deployments/worker.Dockerfile
+    environment:
+      REDIS_ADDR: redis:6379
+      MONGO_URI: mongodb://mongo:27017
+    depends_on:
+      - redis
+      - mongo
+    deploy:
+      replicas: 4
+
+  redis:
+    image: redis:7
+    container_name: scraper-redis
+    ports:
+      - "6379:6379"
+
+  mongo:
+    image: mongo:8
+    container_name: scraper-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redis-dashboard
+    ports:
+      - "5540:5540"
+    environment:
+      RI_ACCEPT_TERMS_AND_CONDITIONS: "true"
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: scraper-redis
+    depends_on:
+      - redis
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-dashboard
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:
